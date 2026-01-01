@@ -1,40 +1,78 @@
+//! # skimple
+//!
+//! `skimple` is a *simple* interface for [skim fuzzy-matcher](https://crates.io/crates/fuzzy-matcher)
+//!
+//! ## Examples
+//! ```rust
+//! use skimple::SkimpleMatcher;
+//!
+//! let matcher = SkimpleMatcher::default();
+//! let haystack = ["Mort", "Sourcery", "Wyrd Sisters", "Pyramids", "Guards! Guards!"];
+//! let needle = "gards";
+//!
+//! let result = matcher.fuzzy(&haystack, &needle);
+//! assert_eq!(result, Ok("Guards! Guards!"));
+//! ```
+
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use thiserror::Error;
 
+/// Possible errors that can occur during a fuzzy search
 #[derive(Error, Debug, PartialEq)]
 pub enum SkimpleError {
+    /// There were no matches for the search string
     #[error("Unable to find needle in haystack")]
     NeedleNotFoundError,
 
-    // This *won't* happen, but I'd rather not panic
+    /// This is not a case that will realistically occur in normal usage
+    ///
+    /// It's defensive variant to represent an error while trying
+    /// to get the element with the highest score in the fuzzy matching step
     #[error("Needle disappeared from haystack")]
     NeedleDisappearedError,
 }
 
+/// A simple (skimple?) struct to wrap around `SkimMatcherV2`
 pub struct SkimpleMatcher {
     matcher: SkimMatcherV2,
 }
 
 impl SkimpleMatcher {
+    /// The default constructor for `SkimpleMatcher`
+    ///
+    /// Embeds `SkimMatcherV2::default()`
     pub fn default() -> Self {
         SkimpleMatcher {
             matcher: SkimMatcherV2::default(),
         }
     }
 
+    /// Creates a new `SkimpleMatcher` with a user supplied `SkimMatcherV2`
     pub fn new(matcher: SkimMatcherV2) -> Self {
         SkimpleMatcher { matcher }
     }
 
-    pub fn fuzzy<'a, 'b>(
-        &self,
-        haystack: &'a [&'a str],
-        needle: &'b str,
-    ) -> Result<&'a str, SkimpleError> {
+    /// Fuzzily search through a list of strings
+    ///
+    /// ## Examples
+    /// ```rust
+    /// use skimple::SkimpleMatcher;
+    ///
+    /// let matcher = SkimpleMatcher::default();
+    /// let haystack = ["Mort", "Sourcery", "Wyrd Sisters", "Pyramids", "Guards! Guards!"];
+    /// let needle = "gards";
+    ///
+    /// let result = matcher.fuzzy(&haystack, &needle);
+    /// assert_eq!(result, Ok("Guards! Guards!"));
+    /// ```
+    pub fn fuzzy<'a, T>(&self, haystack: &'a [T], needle: &str) -> Result<&'a str, SkimpleError>
+    where
+        T: AsRef<str>,
+    {
         let results: Vec<i64> = haystack
             .iter()
-            .map(|item| self.matcher.fuzzy_match(item, needle).unwrap_or(0))
+            .map(|item| self.matcher.fuzzy_match(item.as_ref(), needle).unwrap_or(0))
             .collect();
 
         if results.iter().sum::<i64>() == 0 {
@@ -46,7 +84,8 @@ impl SkimpleMatcher {
             .enumerate()
             .max_by(|(_, a), (_, b)| a.cmp(b))
             .map(|(index, _)| index)
-            .ok_or(SkimpleError::NeedleDisappearedError)?];
+            .ok_or(SkimpleError::NeedleDisappearedError)?]
+        .as_ref();
 
         Ok(result)
     }
@@ -57,7 +96,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn happy_path() {
+    fn test_fuzzy_search_slice_of_str() {
         let matcher = SkimpleMatcher::default();
         let haystack = ["Mort", "Sourcery", "Wyrd Sisters", "Pyramids", "Guards! Guards!"];
         let needle = "gards";
@@ -67,7 +106,23 @@ mod tests {
     }
 
     #[test]
-    fn not_found() {
+    fn test_fuzzy_search_vec_of_string() {
+        let matcher = SkimpleMatcher::default();
+        let haystack = vec![
+            "Mort".to_string(),
+            "Sourcery".to_string(),
+            "Wyrd Sisters".to_string(),
+            "Pyramids".to_string(),
+            "Guards! Guards!".to_string(),
+        ];
+        let needle = "gards";
+
+        let result = matcher.fuzzy(&haystack, &needle);
+        assert_eq!(result, Ok("Guards! Guards!"));
+    }
+
+    #[test]
+    fn not_fuzzy_search_search_string_not_found() {
         let matcher = SkimpleMatcher::default();
         let haystack = ["Mort", "Sourcery", "Wyrd Sisters", "Pyramids", "Guards! Guards!"];
         let needle = "Going Postal";

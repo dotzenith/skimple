@@ -1,7 +1,14 @@
 [package]
 name = "skimple"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
+description = "A simple interface for the skim fuzzy-matcher"
+documentation = "https://docs.rs/skimple"
+homepage = "https://github.com/dotzenith/skimple"
+repository = "https://github.com/dotzenith/skimple"
+readme  = "README.md"
+keywords = ["fuzzy", "match", "text", "search"]
+license = "MIT"
 
 [dependencies]
 fuzzy-matcher = "0.3.7"
