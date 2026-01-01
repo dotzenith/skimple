@@ -7,6 +7,7 @@
 
 ## ❖ Examples
 
+### Best Match
 ```rust
 use skimple::SkimpleMatcher;
 
@@ -14,13 +15,25 @@ let matcher = SkimpleMatcher::default();
 let haystack = ["Mort", "Sourcery", "Wyrd Sisters", "Pyramids", "Guards! Guards!"];
 let needle = "gards";
 
-let result = matcher.fuzzy(&haystack, &needle);
+let result = matcher.fuzzy_best(&haystack, &needle);
 assert_eq!(result, Ok("Guards! Guards!"));
+```
+
+### All Matches
+```rust
+use skimple::SkimpleMatcher;
+
+let matcher = SkimpleMatcher::default();
+let haystack = ["Mort", "Sourcery", "Wyrd Sisters", "Pyramids", "Guards! Guards!"];
+let needle = "yr";
+
+let result = matcher.fuzzy_all(&haystack, &needle);
+assert_eq!(result, Ok(vec!["Wyrd Sisters", "Pyramids"]));
 ```
 
 ## ❖ What's New?
 
-1.0.0 - Initial Release
+2.0.0 - Add feature to return all matches, and not just the best
 
 ---
 

@@ -2,7 +2,8 @@
 //!
 //! `skimple` is a *simple* interface for [skim fuzzy-matcher](https://crates.io/crates/fuzzy-matcher)
 //!
-//! ## Examples
+//!
+//! ### Best Match
 //! ```rust
 //! use skimple::SkimpleMatcher;
 //!
@@ -10,8 +11,20 @@
 //! let haystack = ["Mort", "Sourcery", "Wyrd Sisters", "Pyramids", "Guards! Guards!"];
 //! let needle = "gards";
 //!
-//! let result = matcher.fuzzy(&haystack, &needle);
+//! let result = matcher.fuzzy_best(&haystack, &needle);
 //! assert_eq!(result, Ok("Guards! Guards!"));
+//! ```
+//!
+//! ### All Matches
+//! ```rust
+//! use skimple::SkimpleMatcher;
+//!
+//! let matcher = SkimpleMatcher::default();
+//! let haystack = ["Mort", "Sourcery", "Wyrd Sisters", "Pyramids", "Guards! Guards!"];
+//! let needle = "yr";
+//!
+//! let result = matcher.fuzzy_all(&haystack, &needle);
+//! assert_eq!(result, Ok(vec!["Wyrd Sisters", "Pyramids"]));
 //! ```
 
 use fuzzy_matcher::FuzzyMatcher;
@@ -53,7 +66,7 @@ impl SkimpleMatcher {
         SkimpleMatcher { matcher }
     }
 
-    /// Fuzzily search through a list of strings
+    /// Fuzzily search through a list of strings, returning the best match
     ///
     /// ## Examples
     /// ```rust
@@ -63,10 +76,10 @@ impl SkimpleMatcher {
     /// let haystack = ["Mort", "Sourcery", "Wyrd Sisters", "Pyramids", "Guards! Guards!"];
     /// let needle = "gards";
     ///
-    /// let result = matcher.fuzzy(&haystack, &needle);
+    /// let result = matcher.fuzzy_best(&haystack, &needle);
     /// assert_eq!(result, Ok("Guards! Guards!"));
     /// ```
-    pub fn fuzzy<'a, T>(&self, haystack: &'a [T], needle: &str) -> Result<&'a str, SkimpleError>
+    pub fn fuzzy_best<'a, T>(&self, haystack: &'a [T], needle: &str) -> Result<&'a str, SkimpleError>
     where
         T: AsRef<str>,
     {
@@ -89,6 +102,44 @@ impl SkimpleMatcher {
 
         Ok(result)
     }
+
+    /// Fuzzily search through a list of strings, returning all matches sorted by match score
+    ///
+    /// ## Examples
+    /// ```rust
+    /// use skimple::SkimpleMatcher;
+    ///
+    /// let matcher = SkimpleMatcher::default();
+    /// let haystack = ["Mort", "Sourcery", "Wyrd Sisters", "Pyramids", "Guards! Guards!"];
+    /// let needle = "yr";
+    ///
+    /// let result = matcher.fuzzy_all(&haystack, &needle);
+    /// assert_eq!(result, Ok(vec!["Wyrd Sisters", "Pyramids"]));
+    /// ```
+    pub fn fuzzy_all<'a, T>(&self, haystack: &'a [T], needle: &str) -> Result<Vec<&'a str>, SkimpleError>
+    where
+        T: AsRef<str>,
+    {
+        let results: Vec<i64> = haystack
+            .iter()
+            .map(|item| self.matcher.fuzzy_match(item.as_ref(), needle).unwrap_or(0))
+            .collect();
+
+        if results.iter().sum::<i64>() == 0 {
+            return Err(SkimpleError::NeedleNotFoundError);
+        }
+
+        let mut matches: Vec<(&str, i64)> = haystack
+            .iter()
+            .map(|item| item.as_ref())
+            .zip(results.into_iter())
+            .filter(|(_, score)| *score != 0)
+            .collect();
+
+        matches.sort_by(|(_, a), (_, b)| a.cmp(b));
+
+        Ok(matches.into_iter().map(|(item, _)| item).collect())
+    }
 }
 
 #[cfg(test)]
@@ -96,17 +147,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_fuzzy_search_slice_of_str() {
+    fn test_fuzzy_search_best_slice_of_str() {
         let matcher = SkimpleMatcher::default();
         let haystack = ["Mort", "Sourcery", "Wyrd Sisters", "Pyramids", "Guards! Guards!"];
         let needle = "gards";
 
-        let result = matcher.fuzzy(&haystack, &needle);
+        let result = matcher.fuzzy_best(&haystack, &needle);
         assert_eq!(result, Ok("Guards! Guards!"));
     }
 
     #[test]
-    fn test_fuzzy_search_vec_of_string() {
+    fn test_fuzzy_search_best_vec_of_string() {
         let matcher = SkimpleMatcher::default();
         let haystack = vec![
             "Mort".to_string(),
@@ -117,17 +168,27 @@ mod tests {
         ];
         let needle = "gards";
 
-        let result = matcher.fuzzy(&haystack, &needle);
+        let result = matcher.fuzzy_best(&haystack, &needle);
         assert_eq!(result, Ok("Guards! Guards!"));
     }
 
     #[test]
-    fn not_fuzzy_search_search_string_not_found() {
+    fn test_fuzzy_search_search_best_string_not_found() {
         let matcher = SkimpleMatcher::default();
         let haystack = ["Mort", "Sourcery", "Wyrd Sisters", "Pyramids", "Guards! Guards!"];
         let needle = "Going Postal";
 
-        let result = matcher.fuzzy(&haystack, &needle);
+        let result = matcher.fuzzy_best(&haystack, &needle);
         assert_eq!(result, Err(SkimpleError::NeedleNotFoundError));
+    }
+
+    #[test]
+    fn test_fuzzy_search_search_all() {
+        let matcher = SkimpleMatcher::default();
+        let haystack = ["Mort", "Sourcery", "Wyrd Sisters", "Pyramids", "Guards! Guards!"];
+        let needle = "yr";
+
+        let result = matcher.fuzzy_all(&haystack, &needle);
+        assert_eq!(result, Ok(vec!["Wyrd Sisters", "Pyramids"]));
     }
 }
