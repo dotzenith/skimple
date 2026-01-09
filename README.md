@@ -33,7 +33,7 @@ assert_eq!(result, Ok(vec!["Wyrd Sisters", "Pyramids"]));
 
 ## ❖ What's New?
 
-2.0.0 - Add feature to return all matches, and not just the best
+2.0.1 - Add feature to return all matches, and not just the best
 
 ---
 

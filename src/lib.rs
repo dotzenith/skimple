@@ -173,7 +173,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fuzzy_search_search_best_string_not_found() {
+    fn test_fuzzy_search_best_string_not_found() {
         let matcher = SkimpleMatcher::default();
         let haystack = ["Mort", "Sourcery", "Wyrd Sisters", "Pyramids", "Guards! Guards!"];
         let needle = "Going Postal";

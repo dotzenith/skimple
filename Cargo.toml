@@ -1,6 +1,6 @@
 [package]
 name = "skimple"
-version = "2.0.0"
+version = "2.0.1"
 edition = "2024"
 description = "A simple interface for the skim fuzzy-matcher"
 documentation = "https://docs.rs/skimple"
