@@ -4,7 +4,6 @@
 
 `skimple` is a *simple* interface for [skim fuzzy-matcher](https://crates.io/crates/fuzzy-matcher)
 
-
 ## ❖ Examples
 
 ### Best Match
